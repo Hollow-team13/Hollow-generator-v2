@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,6 +34,8 @@ type GeneratorForm = {
   selectedImages: string[];
 };
 
+type PublishedSite = GeneratorForm & { kind: GeneratorType };
+
 const DEFAULT_CONDO_IMAGES = [
   {
     src: 'https://i.supaimg.com/755ee084-1fb0-4f60-9563-6c7e28e59a26/7e3b7bd6-93ba-49b7-b8d0-85e23d8f7dd4.jpg',
@@ -65,7 +67,43 @@ const initialForm: GeneratorForm = {
 
 const templateOptions = ['Obsidian', 'Nocturne', 'Velvet'];
 
+function encodeSite(site: PublishedSite) {
+  const bytes = new TextEncoder().encode(JSON.stringify(site));
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeSite(value: string): PublishedSite | null {
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as PublishedSite;
+    if (!parsed || !parsed.title || !Array.isArray(parsed.selectedImages)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function readPublishedSite() {
+  if (typeof window === 'undefined') return null;
+  const encoded = new URLSearchParams(window.location.search).get('site');
+  return encoded ? decodeSite(encoded) : null;
+}
+
+function makePublishedLink(kind: GeneratorType, form: GeneratorForm) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('site', encodeSite({ kind, ...form }));
+  return url.toString();
+}
+
 function App() {
+  const [publishedSite] = useState<PublishedSite | null>(() => readPublishedSite());
   const [stage, setStage] = useState<Stage>('select');
   const [kind, setKind] = useState<GeneratorType | null>(null);
   const [form, setForm] = useState<GeneratorForm>(initialForm);
@@ -73,6 +111,8 @@ function App() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  if (publishedSite) return <PublishedCondoSite site={publishedSite} />;
 
   const updateForm = (field: keyof GeneratorForm, value: string | string[]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -109,11 +149,11 @@ function App() {
     }, 650);
   };
 
-  const generatedLink = `hollow.page/${kind ?? 'site'}/${slugify(form.title) || 'novo-site'}`;
+  const generatedLink = kind ? makePublishedLink(kind, form) : makePublishedLink('condo', form);
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`https://${generatedLink}`);
+      await navigator.clipboard.writeText(generatedLink);
     } catch {
       // Clipboard may be unavailable in a preview frame; the success state still confirms intent.
     }
@@ -265,9 +305,14 @@ function ConfigurationWorkspace({
       : [...form.selectedImages, src]);
   };
 
-  const handleImageFiles = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    const urls = files.map((file) => URL.createObjectURL(file));
+    const urls = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    })));
     if (urls.length) onUpdate('selectedImages', [...form.selectedImages, ...urls]);
     event.target.value = '';
   };
@@ -441,13 +486,62 @@ function PreviewWorkspace({
             {copied && <div className="success-note" data-testid="status-link-copied"><Check size={12} /> Link copiado para a área de transferência.</div>}
           </div>
           <div style={{ display: 'grid', gap: 8, marginTop: 15 }}>
-            <button className="button-primary" type="button" data-testid="button-open-generated" onClick={() => window.open(`https://${generatedLink}`, '_blank')}><ExternalLink size={12} /> Abrir site</button>
+            <button className="button-primary" type="button" data-testid="button-open-generated" onClick={() => window.open(generatedLink, '_blank')}><ExternalLink size={12} /> Abrir site</button>
             <button className="button-secondary" type="button" data-testid="button-new-site" onClick={onReset}><WandSparkles size={12} /> Criar outro site</button>
           </div>
         </aside>
       </div>
       {!generated && <p>Gerando...</p>}
     </section>
+  );
+}
+
+function PublishedCondoSite({ site }: { site: PublishedSite }) {
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const images = site.selectedImages.length ? site.selectedImages : DEFAULT_CONDO_IMAGES.map((image) => image.src);
+  const primaryImage = site.imageUrl.trim() || images[0];
+  const verificationUrl = site.verificationUrl.trim();
+
+  const enterGame = () => setVerificationOpen(true);
+  const verifyAndContinue = () => {
+    if (!verificationUrl) return;
+    window.location.href = verificationUrl;
+  };
+
+  return (
+    <main className="public-site" style={{ '--public-accent': site.accent } as CSSProperties}>
+      <header className="public-header">
+        <div className="public-brand"><span className="public-brand-icon"><ShieldCheck size={17} /></span><strong>{site.title || 'CONDO OFICIAL'}</strong></div>
+        <button className="public-button public-button-small" type="button" onClick={enterGame}><ArrowRight size={14} /> Entrar no jogo</button>
+      </header>
+      <div className="public-content">
+        <section className="public-hero">
+          <span className="public-online"><span /> ONLINE AGORA</span>
+          <h1>The future of<br />condo games.</h1>
+          <p>{site.subtitle || 'Escolha um servidor online e entre na experiência. Milhares de jogadores já estão conectados.'}</p>
+          <button className="public-button public-button-large" type="button" onClick={enterGame}><ArrowRight size={15} /> Entrar no jogo</button>
+        </section>
+        <section className="public-feature" style={{ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.74)), url("${primaryImage}")` }}>
+          <div><small>DESTAQUE 1</small><strong>Novos mundos para explorar</strong></div><span>Arraste para o lado</span>
+        </section>
+        <section className="public-stats"><div><strong>345</strong><span>Jogadores online</span></div><div><strong>30</strong><span>Servidores online</span></div></section>
+        <section className="public-gallery">
+          {images.slice(0, 4).map((image, index) => <img key={`${image}-${index}`} src={image} alt={`Imagem do condo ${index + 1}`} />)}
+        </section>
+        <p className="public-footer">{site.verificationUrl ? 'Verificação configurada para entrar no jogo.' : 'Este condo ainda não configurou uma URL de verificação.'}</p>
+      </div>
+      {verificationOpen && (
+        <div className="verification-backdrop" role="presentation" onClick={() => setVerificationOpen(false)}>
+          <section className="verification-modal" role="dialog" aria-modal="true" aria-labelledby="verification-title" onClick={(event) => event.stopPropagation()}>
+            <button className="verification-close" type="button" aria-label="Fechar" onClick={() => setVerificationOpen(false)}>×</button>
+            <ShieldCheck size={23} />
+            <h2 id="verification-title">Verificação necessária</h2>
+            <p>{verificationUrl ? 'Para entrar no jogo você precisa se verificar.' : 'O criador ainda não informou uma URL de verificação.'}</p>
+            <button className="public-button public-button-large" type="button" disabled={!verificationUrl} onClick={verifyAndContinue}><ShieldCheck size={15} /> Verificar-se</button>
+          </section>
+        </div>
+      )}
+    </main>
   );
 }
 
