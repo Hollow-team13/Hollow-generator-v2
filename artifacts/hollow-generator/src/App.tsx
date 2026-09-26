@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   Gift,
   Globe2,
   Image,
+  ImagePlus,
   Layers3,
   MoreVertical,
   Palette,
@@ -30,7 +31,27 @@ type GeneratorForm = {
   accent: string;
   template: string;
   imageUrl: string;
+  selectedImages: string[];
 };
+
+const DEFAULT_CONDO_IMAGES = [
+  {
+    src: 'https://i.supaimg.com/755ee084-1fb0-4f60-9563-6c7e28e59a26/7e3b7bd6-93ba-49b7-b8d0-85e23d8f7dd4.jpg',
+    label: 'Cena principal',
+  },
+  {
+    src: 'https://i.supaimg.com/755ee084-1fb0-4f60-9563-6c7e28e59a26/b42f561d-3b98-4085-a16e-a7224d0f5f94.png',
+    label: 'Cena noturna',
+  },
+  {
+    src: 'https://i.supaimg.com/755ee084-1fb0-4f60-9563-6c7e28e59a26/e0769ae8-08d8-42ce-b34c-1a564f347cba.png',
+    label: 'Cena no deserto',
+  },
+  {
+    src: 'https://i.supaimg.com/755ee084-1fb0-4f60-9563-6c7e28e59a26/86eab221-0730-4390-b9ee-cdd89362a6f0.jpg',
+    label: 'Avatar',
+  },
+] as const;
 
 const initialForm: GeneratorForm = {
   title: '',
@@ -39,6 +60,7 @@ const initialForm: GeneratorForm = {
   accent: '#a6a6aa',
   template: 'Obsidian',
   imageUrl: '',
+  selectedImages: [],
 };
 
 const templateOptions = ['Obsidian', 'Nocturne', 'Velvet'];
@@ -52,7 +74,7 @@ function App() {
   const [generated, setGenerated] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const updateForm = (field: keyof GeneratorForm, value: string) => {
+  const updateForm = (field: keyof GeneratorForm, value: string | string[]) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -60,8 +82,9 @@ function App() {
     setKind(value);
     setForm({
       ...initialForm,
-      title: value === 'giveaway' ? 'Meu Giveaway' : 'Meu Condo',
+      title: value === 'giveaway' ? 'Meu Giveaway' : 'Condo Oficial',
       subtitle: value === 'giveaway' ? 'Participe e concorra.' : 'Uma experiência exclusiva.',
+      selectedImages: value === 'condo' ? [DEFAULT_CONDO_IMAGES[0].src] : [],
     });
     setGenerated(false);
     setCopied(false);
@@ -141,9 +164,7 @@ function App() {
         </header>
 
         <div className="content-wrap">
-          {stage === 'select' && (
-            <SelectionWorkspace onSelect={chooseGenerator} />
-          )}
+          {stage === 'select' && <SelectionWorkspace onSelect={chooseGenerator} />}
           {stage === 'configure' && kind && (
             <ConfigurationWorkspace
               kind={kind}
@@ -189,7 +210,7 @@ function SelectionWorkspace({ onSelect }: { onSelect: (kind: GeneratorType) => v
           <button className="choice-card" type="button" data-testid="button-select-condo" onClick={() => onSelect('condo')}>
             <span className="choice-icon"><Building2 size={13} /></span>
             <p className="choice-name">Condo</p>
-            <p className="choice-desc">Página de condo com nome, imagens próprias, modelos e cores.</p>
+            <p className="choice-desc">Página de condo com imagens padrão, imagens próprias, modelos e cores.</p>
           </button>
         </div>
       </section>
@@ -230,9 +251,27 @@ function ConfigurationWorkspace({
   form: GeneratorForm;
   generating: boolean;
   onBack: () => void;
-  onUpdate: (field: keyof GeneratorForm, value: string) => void;
+  onUpdate: (field: keyof GeneratorForm, value: string | string[]) => void;
   onGenerate: () => void;
 }) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const customImages = form.selectedImages.filter((src) => !DEFAULT_CONDO_IMAGES.some((image) => image.src === src));
+  const imageOptions = [...DEFAULT_CONDO_IMAGES, ...customImages.map((src, index) => ({ src, label: `Imagem ${index + 1}` }))];
+
+  const toggleImage = (src: string) => {
+    const selected = form.selectedImages.includes(src);
+    onUpdate('selectedImages', selected
+      ? form.selectedImages.filter((image) => image !== src)
+      : [...form.selectedImages, src]);
+  };
+
+  const handleImageFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    const urls = files.map((file) => URL.createObjectURL(file));
+    if (urls.length) onUpdate('selectedImages', [...form.selectedImages, ...urls]);
+    event.target.value = '';
+  };
+
   return (
     <div className="workspace-grid animate-in">
       <section className="panel flow-panel" data-testid="configuration-workspace">
@@ -256,13 +295,46 @@ function ConfigurationWorkspace({
             <textarea className="field-textarea" data-testid="input-site-subtitle" value={form.subtitle} onChange={(event) => onUpdate('subtitle', event.target.value)} placeholder="Uma frase curta para receber seus visitantes." />
           </label>
           {kind === 'condo' && (
-            <label className="field full animate-in">
-              <span className="field-label">Imagem principal <span className="field-hint">opcional</span></span>
-              <span style={{ position: 'relative' }}>
-                <Image size={13} style={{ position: 'absolute', top: 11, left: 11, color: 'var(--subtle)' }} />
-                <input className="field-input" style={{ paddingLeft: 32 }} data-testid="input-image-url" value={form.imageUrl} onChange={(event) => onUpdate('imageUrl', event.target.value)} placeholder="Cole a URL da imagem principal" />
-              </span>
-            </label>
+            <>
+              <label className="field full animate-in">
+                <span className="field-label">Imagem principal <span className="field-hint">opcional</span></span>
+                <span style={{ position: 'relative' }}>
+                  <Image size={13} style={{ position: 'absolute', top: 11, left: 11, color: 'var(--subtle)' }} />
+                  <input className="field-input" style={{ paddingLeft: 32 }} data-testid="input-image-url" value={form.imageUrl} onChange={(event) => onUpdate('imageUrl', event.target.value)} placeholder="Cole uma URL para substituir a principal" />
+                </span>
+              </label>
+              <section className="image-picker full" aria-labelledby="image-picker-title">
+                <div className="image-picker-head">
+                  <div>
+                    <span className="field-label" id="image-picker-title">Imagens do condo</span>
+                    <p className="field-hint image-picker-note">As imagens originais voltaram. Selecione uma ou mais para sua página.</p>
+                  </div>
+                  <span className="image-count">{form.selectedImages.length} selecionada{form.selectedImages.length === 1 ? '' : 's'}</span>
+                </div>
+                <div className="image-grid">
+                  {imageOptions.map((image) => {
+                    const selected = form.selectedImages.includes(image.src);
+                    return (
+                      <button
+                        className={`image-option${selected ? ' selected' : ''}`}
+                        type="button"
+                        key={image.src}
+                        aria-label={`${selected ? 'Remover' : 'Selecionar'} ${image.label}`}
+                        aria-pressed={selected}
+                        onClick={() => toggleImage(image.src)}
+                      >
+                        <img src={image.src} alt={image.label} loading="lazy" />
+                        {selected && <span className="image-check"><Check size={12} /></span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input ref={imageInputRef} className="visually-hidden" type="file" accept="image/*" multiple onChange={handleImageFiles} />
+                <button className="add-images-button" type="button" onClick={() => imageInputRef.current?.click()}>
+                  <ImagePlus size={14} /> Adicionar minhas imagens
+                </button>
+              </section>
+            </>
           )}
           <label className="field">
             <span className="field-label">Modelo visual</span>
@@ -317,6 +389,11 @@ function PreviewWorkspace({
   onCopy: () => void;
   onReset: () => void;
 }) {
+  const activeImage = form.imageUrl.trim() || form.selectedImages[0];
+  const previewBackground = activeImage
+    ? `linear-gradient(180deg, rgba(8,8,10,.12), rgba(8,8,10,.88)), url("${activeImage}") center / cover`
+    : `radial-gradient(circle at 50% 30%, ${form.accent}42, transparent 48%), #111014`;
+
   return (
     <section className="panel flow-panel animate-in" data-testid="preview-workspace">
       <div className="flow-head">
@@ -335,8 +412,8 @@ function PreviewWorkspace({
             <span className="window-dot" /><span className="window-dot" /><span className="window-dot" />
             <span className="preview-url">{generatedLink}</span>
           </div>
-          <div className="preview-body" style={{ background: `radial-gradient(circle at 50% 30%, ${form.accent}42, transparent 48%), #111014` }}>
-            <div>
+          <div className="preview-body" style={{ background: previewBackground }}>
+            <div className="preview-copy">
               <ShieldCheck size={20} style={{ color: form.accent, marginBottom: 12 }} />
               <h3>{form.title || 'Seu novo site'}</h3>
               <p>{form.subtitle || 'Uma experiência criada para a sua comunidade.'}</p>
@@ -349,6 +426,7 @@ function PreviewWorkspace({
           <div className="config-list">
             <div className="config-item"><span>Tipo</span><strong>{kind === 'giveaway' ? 'Giveaway' : 'Condo'}</strong></div>
             <div className="config-item"><span>Modelo</span><strong>{form.template}</strong></div>
+            <div className="config-item"><span>Imagens</span><strong>{kind === 'condo' ? form.selectedImages.length : '—'}</strong></div>
             <div className="config-item"><span>Cor</span><strong style={{ color: form.accent }}>{form.accent.toUpperCase()}</strong></div>
             <div className="config-item"><span>Verificação</span><strong>{form.verificationUrl ? 'Definida' : 'Não definida'}</strong></div>
           </div>
