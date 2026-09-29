@@ -67,6 +67,27 @@ const initialForm: GeneratorForm = {
 
 const templateOptions = ['Obsidian', 'Nocturne', 'Velvet'];
 
+function isPublicImageSource(value: unknown): value is string {
+  return typeof value === 'string' && /^(https?:)?\/\//i.test(value.trim());
+}
+
+function normalizePublishedSite(value: unknown): PublishedSite | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<PublishedSite>;
+  if (typeof raw.title !== 'string' || !raw.title.trim() || !Array.isArray(raw.selectedImages)) return null;
+
+  return {
+    kind: raw.kind === 'giveaway' ? 'giveaway' : 'condo',
+    title: raw.title,
+    subtitle: typeof raw.subtitle === 'string' ? raw.subtitle : '',
+    verificationUrl: typeof raw.verificationUrl === 'string' ? raw.verificationUrl : '',
+    accent: typeof raw.accent === 'string' && /^#[0-9a-f]{6}$/i.test(raw.accent) ? raw.accent : initialForm.accent,
+    template: typeof raw.template === 'string' ? raw.template : initialForm.template,
+    imageUrl: isPublicImageSource(raw.imageUrl) ? raw.imageUrl.trim() : '',
+    selectedImages: raw.selectedImages.filter(isPublicImageSource).map((image) => image.trim()),
+  };
+}
+
 function encodeSite(site: PublishedSite) {
   const bytes = new TextEncoder().encode(JSON.stringify(site));
   let binary = '';
@@ -80,9 +101,7 @@ function decodeSite(value: string): PublishedSite | null {
     const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
     const binary = atob(padded);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as PublishedSite;
-    if (!parsed || !parsed.title || !Array.isArray(parsed.selectedImages)) return null;
-    return parsed;
+    return normalizePublishedSite(JSON.parse(new TextDecoder().decode(bytes)));
   } catch {
     return null;
   }
@@ -96,9 +115,14 @@ function readPublishedSite() {
 
 function makePublishedLink(kind: GeneratorType, form: GeneratorForm) {
   const url = new URL(window.location.href);
+  const shareableForm: GeneratorForm = {
+    ...form,
+    imageUrl: isPublicImageSource(form.imageUrl) ? form.imageUrl.trim() : '',
+    selectedImages: form.selectedImages.filter(isPublicImageSource).map((image) => image.trim()),
+  };
   url.search = '';
   url.hash = '';
-  url.searchParams.set('site', encodeSite({ kind, ...form }));
+  url.searchParams.set('site', encodeSite({ kind, ...shareableForm }));
   return url.toString();
 }
 
