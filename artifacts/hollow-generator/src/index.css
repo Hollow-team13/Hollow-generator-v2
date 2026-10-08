@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
+@source './**/*.{html,js,ts,jsx,tsx}';
 
 :root {
   --bg: #070707;
@@ -186,6 +187,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .field-input:hover, .field-select:hover, .field-textarea:hover { border-color: #3b3b40; }
 .field-input:focus, .field-select:focus, .field-textarea:focus { outline: 0; border-color: var(--signal); box-shadow: 0 0 0 3px rgba(220,220,220,.1); }
 .field-textarea { min-height: 74px; resize: vertical; }
+.verification-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101014;
+  cursor: pointer;
+}
+.verification-toggle input { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--signal-bright); }
+.verification-toggle span { display: grid; gap: 4px; }
+.verification-toggle strong { color: var(--ink); font-size: 10px; font-weight: 500; }
+.verification-toggle small, .field-error { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.field-error { color: #ff9c9c; }
+.verification-url-field { display: grid; gap: 6px; }
 .color-row { display: flex; align-items: center; gap: 9px; }
 .color-input { width: 34px; height: 34px; padding: 3px; border: 1px solid var(--line); border-radius: 7px; background: #101014; }
 .color-input::-webkit-color-swatch-wrapper { padding: 0; }
@@ -418,7 +435,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .public-online span { width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.9); }
 .public-hero h1 { margin: 22px 0 0; font-family: var(--font-display); font-size: clamp(42px, 8vw, 82px); line-height: .98; letter-spacing: -.065em; }
 .public-hero p { max-width: 600px; margin: 25px 0 0; color: #aaa6ad; font-size: clamp(14px, 2vw, 18px); line-height: 1.5; }
-.public-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; color: #090909; border: 1px solid #fff; background: #fff; font-weight: 700; transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
+.public-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; color: #090909; border: 1px solid #fff; background: #fff; font-weight: 700; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
 .public-button:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(255,255,255,.14); }
 .public-button-small { min-height: 34px; padding: 0 13px; border-radius: 999px; font-size: 10px; white-space: nowrap; }
 .public-button-large { min-height: 47px; margin-top: 27px; padding: 0 24px; border-radius: 13px; font-size: 13px; }
@@ -442,7 +459,86 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .verification-modal .public-button { width: 100%; margin-top: 22px; }
 .verification-modal .public-button:disabled { cursor: not-allowed; opacity: .45; }
 .verification-close { position: absolute; top: 10px; right: 12px; width: 27px; height: 27px; color: #aaa; border: 0; background: transparent; font-size: 22px; line-height: 1; }
+.public-brand-link { color: inherit; text-decoration: none; }
+.giveaway-site {
+  --public-accent: #f3ce74;
+  background:
+    radial-gradient(ellipse 80% 42% at 50% -5%, color-mix(in srgb, var(--public-accent) 12%, transparent), transparent 75%),
+    #090909;
+}
+.giveaway-site.theme-nocturne {
+  background:
+    radial-gradient(ellipse 80% 42% at 50% -5%, rgba(83, 124, 190, .18), transparent 75%),
+    #080b12;
+}
+.giveaway-site.theme-velvet {
+  background:
+    radial-gradient(ellipse 80% 42% at 50% -5%, rgba(177, 99, 137, .17), transparent 75%),
+    #10090e;
+}
+.giveaway-live, .giveaway-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--public-accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+.giveaway-live { padding: 8px 11px; border: 1px solid color-mix(in srgb, var(--public-accent) 35%, transparent); border-radius: 999px; }
+.giveaway-live span { width: 6px; height: 6px; border-radius: 50%; background: var(--public-accent); box-shadow: 0 0 10px var(--public-accent); }
+.giveaway-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 330px);
+  align-items: center;
+  gap: clamp(24px, 5vw, 70px);
+  padding: clamp(24px, 5vw, 58px);
+  border: 1px solid color-mix(in srgb, var(--public-accent) 27%, #28282b);
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse 60% 100% at 100% 50%, color-mix(in srgb, var(--public-accent) 13%, transparent), transparent 72%),
+    linear-gradient(135deg, #151416, #0c0c0e 70%);
+  box-shadow: 0 25px 80px rgba(0,0,0,.32);
+}
+.giveaway-kicker { color: #d7d1c4; }
+.giveaway-hero h1 { max-width: 720px; margin: 21px 0 0; font-family: var(--font-display); font-size: clamp(38px, 7vw, 74px); letter-spacing: -.065em; line-height: .98; overflow-wrap: anywhere; }
+.giveaway-hero p { max-width: 570px; margin: 18px 0 0; color: #aaa6ad; font-size: clamp(14px, 2vw, 17px); line-height: 1.5; }
+.giveaway-hero .public-button { margin-top: 22px; }
+.giveaway-safe-note { display: block; margin-top: 11px; color: #99949d; font-size: 10px; }
+.giveaway-prize-card {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--public-accent) 35%, transparent);
+  border-radius: 20px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--public-accent) 15%, #171615), #101011 72%);
+}
+.giveaway-prize-icon { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: auto; color: #111; border-radius: 14px; background: var(--public-accent); }
+.giveaway-card-label { color: #a8a2ac; font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; }
+.giveaway-prize-card strong { font-family: var(--font-display); font-size: clamp(21px, 3vw, 30px); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.giveaway-card-game { color: var(--public-accent); font-size: 11px; }
+.giveaway-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-top: 15px; }
+.giveaway-detail-card { min-width: 0; display: grid; align-content: start; justify-items: start; gap: 8px; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: #111113; }
+.giveaway-detail-icon { color: var(--public-accent); }
+.giveaway-detail-card small { color: #8e8992; font-family: var(--font-mono); font-size: 8px; letter-spacing: .08em; }
+.giveaway-detail-card strong { font-family: var(--font-display); font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.giveaway-detail-card > span:last-child { color: #85808a; font-size: 10px; }
+.giveaway-detail-card a { display: inline-flex; align-items: center; gap: 5px; color: var(--public-accent); font-size: 10px; text-decoration: none; }
+.giveaway-how { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 34px; padding: 21px 0; border-top: 1px solid rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.12); }
+.giveaway-how h2 { margin: 9px 0 0; font-family: var(--font-display); font-size: 20px; letter-spacing: -.035em; }
+.giveaway-how p { max-width: 680px; margin: 8px 0 0; color: #99949d; font-size: 11px; line-height: 1.55; }
+.giveaway-how .public-button { flex: 0 0 auto; }
+.giveaway-footer { margin: 24px 0 0; color: #77737b; font-size: 10px; text-align: center; }
+.verification-modal .public-button { text-align: center; }
 @media (max-width: 600px) {
+  .giveaway-hero { grid-template-columns: 1fr; }
+  .giveaway-prize-card { min-height: 190px; }
+  .giveaway-details { grid-template-columns: 1fr; }
+  .giveaway-how { align-items: flex-start; flex-direction: column; }
   .public-content { padding: 36px 19px 60px; }
   .public-hero h1 { font-size: 43px; }
   .public-feature { min-height: 265px; padding: 17px; border-radius: 19px; }
